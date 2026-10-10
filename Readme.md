@@ -2,7 +2,7 @@
 
 Un'applicazione web interattiva progettata per guidare gli utenti nella valutazione e nel potenziamento delle **competenze digitali**, in linea con il framework europeo **DigComp 2.2**.
 
-🔗 **[Prova la Demo Live qui](https://github.io)** *(Sostituisci questo link una volta attivato)*
+
 
 ## 🎯 Obiettivi del Progetto
 
