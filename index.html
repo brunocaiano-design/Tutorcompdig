@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutor INVALSI - Competenze Digitali (DigComp 2.2)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for in-browser JSX parsing -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        html, body, #root { 
+            font-family: 'Inter', sans-serif; 
+            height: 100%; 
+            margin: 0; 
+            padding: 0;
+            overflow: hidden; 
+            background-color: #f8fafc; 
+        }
+        .messages-container::-webkit-scrollbar { width: 6px; }
+        .messages-container::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+        .welcome-card { 
+            max-width: 680px; 
+            margin: 30px auto; 
+            padding: 28px; 
+            border-radius: 24px; 
+            background-color: #ffffff;
+            border: 1px solid #f1f5f9; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04); 
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // SOSTITUISCI QUESTO URL CON QUELLO DELLA TUA NUOVA DISTRIBUZIONE APPS SCRIPT DIGCOMP:
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxbk3YFHqiF6ub8I0izw_G4mOIoLEfEWCxQGmcXEukSSkguwsjYu81B5X5VaKtP9Jz7Ug/exec";
+
+        const { useState, useRef, useEffect } = React;
+
+        // Funzione di compressione ottimizzata per screenshot e interfacce digitali (mantiene leggibili menu e testi piccoli)
+        function compressImage(file, targetWidth = 1600, quality = 0.86) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > targetWidth) {
+                            height = Math.round((height * targetWidth) / width);
+                            width = targetWidth;
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+
+                        const ctx = canvas.getContext('2d');
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                        resolve(compressedBase64);
+                    };
+                    img.onerror = (err) => reject(err);
+                };
+                reader.onerror = (err) => reject(err);
+            });
+        }
+
+        const SYSTEM_INSTRUCTION = `Sei un tutor esperto INVALSI specializzato nelle Competenze Digitali basate sul framework europeo DigComp 2.2. Il tuo obiettivo è guidare gli studenti della Scuola Secondaria di II Grado (14-19 anni) all'acquisizione di pensiero critico, sicurezza e problem solving digitale.
+
+MODALITÀ DI LAVORO (TESTO O IMMAGINE):
+Lo studente può sottoporti un quesito in DUE MODI differenti:
+1. TRAMITE IMMAGINE/SCREENSHOT:
+   - Isola ed evidenzia l'elemento o la schermata su cui si lavora (es. "Analizziamo lo screenshot del Quesito D3").
+   - Esamina con attenzione i pixel reali: menu, icone, bottoni, finestre di dialogo, URL, fogli di calcolo. È SEVERAMENTE VIETATO inventare elementi non visibili.
+   - Se un dettaglio è sgranato o tagliato, chiedi allo studente un ritaglio più ravvicinato senza tirare a indovinare.
+2. TRAMITE INSERIMENTO TESTUALE DIRETTO (senza immagine):
+   - Lo studente può incollare o digitare direttamente il testo di una domanda, un quesito a risposta multipla, un caso di studio digitale o un dubbio teorico (es. copyright, licenze Creative Commons, sicurezza delle password, netiquette, formule di calcolo, ecc.).
+   - Prendi in carico direttamente il testo fornito, focalizza il concetto chiave e procedi con il metodo maieutico guidato.
+
+REGOLE PEDAGOGICHE CRITICHE (FRAMEWORK DIGCOMP 2.2):
+- NON rivelare mai la risposta esatta, la lettera della soluzione o la sequenza diretta di clic da compiere.
+- Guida lo studente a ragionare attraverso le 5 aree di competenza DigComp 2.2:
+  1. Alfabetizzazione su informazioni e dati (ricerca, attendibilità delle fonti, fact-checking, archiviazione).
+  2. Comunicazione e collaborazione (netiquette, condivisione, identità digitale, PEC, SPID).
+  3. Creazione di contenuti digitali (licenze Creative Commons, copyright, formati file, fogli di calcolo).
+  4. Sicurezza (phishing, malware, tutela dei dati personali/GDPR, ergonomia e benessere digitale).
+  5. Risoluzione di problemi (problem solving tecnico, scelta dello strumento digitale adeguato).
+- Poni domande stimolo brevi, fai notare le opzioni e correggi i ragionamenti errati passo dopo passo.
+- Mantieni un tono chiaro, stimolante, professionale e accessibile per ragazzi di 14-19 anni.
+
+FORMATTAZIONE E SCRITTURA:
+- Usa scritture chiare per comandi e scorciatoie (es. "Ctrl + C", "Impostazioni > Privacy", "=CONTA.SE(...)").
+- Non usare sintassi LaTeX complessa o delimitatori dollaro ($).
+
+TUTELA DELLA PRIVACY E DEI MINORI (NON DEROGABILE):
+- Se lo studente menziona nomi propri, cognomi, la scuola di appartenenza, la classe o recapiti, NON ripeterli MAI. Tratta l'utente come studente anonimo.
+
+AMBITO ESCLUSIVO:
+- Solo Competenze Digitali INVALSI / DigComp 2.2. Se l'utente fa domande del tutto estranee, rispondi: "Il mio compito è aiutarti a preparare le prove sulle Competenze Digitali (DigComp 2.2)! Torniamo al nostro quesito: quale aspetto ti sembra più rilevante?".`;
+
+        // Filtro di anonimizzazione preventiva (GDPR / tutela minori)
+        function anonymizeSensitiveData(text) {
+            if (!text) return text;
+            let safe = text;
+            safe = safe.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[email rimossa]');
+            safe = safe.replace(/\b(?:\+39\s?)?(?:3\d{2}[-.\s]?\d{6,7}|0\d{1,4}[-.\s]?\d{5,7})\b/g, '[telefono rimosso]');
+            safe = safe.replace(/\b[A-Za-z]{6}\d{2}[A-Za-z]\d{2}[A-Za-z]\d{3}[A-Za-z]\b/g, '[codice fiscale rimosso]');
+            safe = safe.replace(/\b(mi chiamo|sono|chiamami)\s+([A-ZÀ-ÖØ-öø-ÿ][a-zà-öø-ÿ]+(?:\s+[A-ZÀ-ÖØ-öø-ÿ][a-zà-öø-ÿ]+)*)\b/gi, '$1 [studente]');
+            safe = safe.replace(/\b(della|frequento la|classe)\s+([1-5]\s*[A-Za-z]\b)/gi, '$1 [classe]');
+            safe = safe.replace(/\b(scuola|istituto|liceo|itis|ipsia|tecnico)\s+([A-ZÀ-ÖØ-öø-ÿ][a-zà-öø-ÿ]+(?:\s+[A-ZÀ-ÖØ-öø-ÿ][a-zà-öø-ÿ]+)*)\b/gi, '$1 [scuola]');
+            return safe;
+        }
+
+        function cleanMathOutput(text) {
+            if (!text) return text;
+            let cleaned = text;
+            const superscripts = {
+                '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
+                '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹'
+            };
+            cleaned = cleaned.replace(/\^([0-9]+)/g, (match, p1) => {
+                return p1.split('').map(char => superscripts[char] || char).join('');
+            });
+            cleaned = cleaned.replace(/\$\$([\s\S]*?)\$\$/g, '$1');
+            cleaned = cleaned.replace(/\$([^\$\n]+)\$/g, '$1');
+            return cleaned;
+        }
+
+        function prepareTextForSpeech(text) {
+            if (!text) return '';
+            let speech = text;
+            speech = speech.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+            speech = speech.replace(/\*\*(.*?)\*\*/g, '$1');
+            speech = speech.replace(/\*(.*?)\*/g, '$1');
+            speech = speech.replace(/#{1,6}\s+/g, '');
+            speech = speech.replace(/>\s+/g, '');
+            speech = speech.replace(/\bCtrl\b/gi, ' Control ');
+            speech = speech.replace(/\bAlt\b/gi, ' Alt ');
+            speech = speech.replace(/\bURL\b/gi, ' U R L ');
+            speech = speech.replace(/\bDigComp\b/gi, ' Dig Comp ');
+            speech = speech.replace(/\bGUI\b/gi, ' interfaccia grafica ');
+            return speech;
+        }
+
+        function App() {
+            const [messages, setMessages] = useState([]);
+            const [input, setInput] = useState('');
+            const [image, setImage] = useState(null);
+            const [isLoading, setIsLoading] = useState(false);
+            const [level, setLevel] = useState('Secondaria II Grado - Classe Seconda');
+            const [speakingIndex, setSpeakingIndex] = useState(null);
+            const [zoomImage, setZoomImage] = useState(null);
+            const [zoomScale, setZoomScale] = useState(1.25);
+            
+            const scrollRef = useRef(null);
+            const fileInputRef = useRef(null);
+            const textareaRef = useRef(null);
+
+            const speakMessage = (text, index) => {
+                if (!('speechSynthesis' in window)) return;
+
+                if (speakingIndex === index) {
+                    window.speechSynthesis.cancel();
+                    setSpeakingIndex(null);
+                    return;
+                }
+
+                window.speechSynthesis.cancel();
+
+                const speechText = prepareTextForSpeech(text);
+                const utterance = new SpeechSynthesisUtterance(speechText);
+                utterance.lang = 'it-IT';
+                utterance.rate = 0.92;
+                utterance.pitch = 1.0;
+
+                const voices = window.speechSynthesis.getVoices();
+                const itVoice = voices.find(v => v.lang.startsWith('it') || v.lang === 'it_IT');
+                if (itVoice) utterance.voice = itVoice;
+
+                utterance.onstart = () => setSpeakingIndex(index);
+                utterance.onend = () => setSpeakingIndex(null);
+                utterance.onerror = () => setSpeakingIndex(null);
+
+                window.speechSynthesis.speak(utterance);
+            };
+
+            const QUICK_SHORTCUTS = ['Ctrl', 'Alt', 'Shift', 'Tab', '@', '#', 'URL', 'HTTPS', 'AND', 'OR', 'NOT', '≤', '≥', '≠'];
+
+            const insertSymbol = (sym) => {
+                const textarea = textareaRef.current;
+                if (!textarea) {
+                    setInput(prev => prev + sym);
+                    return;
+                }
+                const start = textarea.selectionStart ?? input.length;
+                const end = textarea.selectionEnd ?? input.length;
+                const updated = input.substring(0, start) + sym + input.substring(end);
+                setInput(updated);
+
+                setTimeout(() => {
+                    textarea.focus();
+                    textarea.setSelectionRange(start + sym.length, start + sym.length);
+                }, 10);
+            };
+
+            useEffect(() => {
+                if (scrollRef.current) {
+                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                }
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            }, [messages, isLoading, image, speakingIndex, zoomImage, zoomScale]);
+
+            useEffect(() => {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.onvoiceschanged = () => {
+                        window.speechSynthesis.getVoices();
+                    };
+                }
+            }, []);
+
+            const handleImage = async (file) => {
+                if (file && file.type.startsWith('image/')) {
+                    try {
+                        const compressed = await compressImage(file);
+                        setImage(compressed);
+                    } catch (e) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => setImage(reader.result);
+                        reader.readAsDataURL(file);
+                    }
+                }
+            };
+
+            const onPaste = (e) => {
+                const items = e.clipboardData?.items;
+                if (!items) return;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf("image") !== -1) {
+                        const blob = items[i].getAsFile();
+                        handleImage(blob);
+                    }
+                }
+            };
+
+            const sendMessage = async () => {
+                if ((!input.trim() && !image) || isLoading) return;
+
+                const sanitizedInput = anonymizeSensitiveData(input.trim());
+                const userMsg = { role: 'user', text: sanitizedInput, image: image };
+                setMessages(prev => [...prev, userMsg]);
+                
+                const currentInput = sanitizedInput;
+                const currentImage = image;
+
+                setInput('');
+                setImage(null);
+                setIsLoading(true);
+
+                try {
+                    // Document Anchor: mantiene visibile lo screenshot anche se la conversazione prosegue
+                    let activeDocumentImage = currentImage;
+                    if (!activeDocumentImage) {
+                        for (let k = messages.length - 1; k >= 0; k--) {
+                            if (messages[k].image) {
+                                activeDocumentImage = messages[k].image;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Rolling window: ultimi 6 scambi
+                    const recentMessages = messages.slice(-6);
+
+                    const contents = recentMessages.map(m => {
+                        return {
+                            role: m.role === 'user' ? 'user' : 'model',
+                            parts: [{ text: m.text || '' }]
+                        };
+                    });
+
+                    const userParts = [{ 
+                        text: `[Livello: ${level}] [Ambito: Competenze Digitali DigComp 2.2]
+Domanda/Risposta dello studente: "${currentInput || 'Ho caricato questa schermata/quesito sulle Competenze Digitali. Aiutami ad analizzarlo passo dopo passo.'}"` 
+                    }];
+
+                    // Allega l'immagine attiva del documento all'ultimo turno
+                    if (activeDocumentImage) {
+                        const mimeMatch = activeDocumentImage.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,/);
+                        const detectedMime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+                        const base64Data = activeDocumentImage.replace(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,/, '');
+
+                        userParts.push({
+                            inlineData: {
+                                mimeType: detectedMime,
+                                data: base64Data
+                            }
+                        });
+                    }
+
+                    const response = await fetch(APPS_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({
+                            contents: [...contents, { role: 'user', parts: userParts }],
+                            systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] }
+                        }),
+                    });
+
+                    const data = await response.json();
+                    if (data.error) throw new Error(data.error.message);
+
+                    const rawAiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Errore nella risposta del tutor.";
+                    const sanitizedAiText = cleanMathOutput(rawAiText);
+                    setMessages(prev => [...prev, { role: 'model', text: sanitizedAiText }]);
+                } catch (error) {
+                    setMessages(prev => [...prev, { role: 'model', text: "❌ ERRORE: " + error.message }]);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            return (
+                <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
+                    {/* Top bar */}
+                    <header className="flex-shrink-0 px-4 md:px-6 py-3 bg-white border-b border-slate-200 shadow-xs">
+                        <div className="max-w-4xl mx-auto w-full flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <span className="h-2.5 w-2.5 bg-indigo-600 rounded-full animate-ping"></span>
+                                <h1 className="text-lg font-bold text-slate-800 tracking-tight">Tutor INVALSI - Competenze Digitali</h1>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs font-semibold text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-200">
+                                <i data-lucide="laptop" size="14"></i>
+                                <span>DigComp 2.2</span>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Messages viewport */}
+                    <main ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6 messages-container">
+                        {messages.length === 0 && (
+                            <div className="welcome-card">
+                                <h2 className="text-xl text-slate-800 mb-4 font-bold">
+                                    Ciao studente! 👋 Benvenuto nel tutor per le Competenze Digitali (DigComp 2.2).
+                                </h2>
+                                <p className="text-slate-600 mb-3 font-medium">Come prepararsi alle prove:</p>
+                                <ul className="space-y-3 text-slate-600 mb-6 text-sm">
+                                    <li className="flex items-center gap-2">
+                                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 font-bold text-xs">1</span>
+                                        Seleziona la tua classe di Secondaria di II Grado (2ª o 5ª).
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 font-bold text-xs">2</span>
+                                        Incolla lo screenshot con <strong>Ctrl+V</strong> <em>oppure</em> digita/incolla direttamente il testo del quesito.
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 font-bold text-xs">3</span>
+                                        Rispondi alle domande guida per sviluppare pensiero critico, sicurezza e problem solving digitale!
+                                    </li>
+                                </ul>
+                                <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl text-indigo-700 text-sm">
+                                    💡 <strong>Metodo maieutico:</strong> Il tutor ti guida all'analisi del problema digitale senza darti la soluzione preconfezionata!
+                                </div>
+                                <div className="mt-3 p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl text-slate-500 text-xs flex items-center gap-2">
+                                    <i data-lucide="shield-check" size="16" className="text-emerald-600 flex-shrink-0"></i>
+                                    <span><strong>Privacy protetta:</strong> Dati personali, nomi e recapiti vengono anonimizzati automaticamente prima dell'invio.</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {messages.map((msg, i) => (
+                            <React.Fragment key={i}>
+                                {msg.image && (
+                                    <div className="w-full flex justify-center mb-6 animate-in fade-in">
+                                        <div className="w-full max-w-4xl bg-white border border-slate-200/90 rounded-2xl shadow-sm p-3 md:p-4 flex flex-col items-center">
+                                            <div className="w-full flex items-center justify-between pb-2 mb-2 border-b border-slate-100 text-xs text-slate-500 font-medium">
+                                                <span className="flex items-center gap-1.5 text-indigo-700 font-semibold text-sm">
+                                                    <i data-lucide="file-text" size="18"></i>
+                                                    Schermata / Quesito DigComp 2.2
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setZoomImage(msg.image); setZoomScale(1.3); }}
+                                                    className="flex items-center gap-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl transition-colors font-semibold text-xs border border-indigo-200 shadow-xs cursor-pointer"
+                                                    title="Ingrandisci ed esplora schermate e dettagli"
+                                                >
+                                                    <i data-lucide="zoom-in" size="15"></i>
+                                                    <span>Ingrandisci & Zoom</span>
+                                                </button>
+                                            </div>
+                                            
+                                            {/* Contenitore con scroll dedicato */}
+                                            <div 
+                                                onClick={() => { setZoomImage(msg.image); setZoomScale(1.3); }}
+                                                className="w-full max-h-[550px] overflow-y-auto cursor-zoom-in group relative rounded-xl bg-slate-50 border border-slate-100 p-1 messages-container"
+                                            >
+                                                <img 
+                                                    src={msg.image} 
+                                                    alt="Quesito DigComp" 
+                                                    className="w-full h-auto object-contain object-top rounded-lg" 
+                                                />
+                                                <div className="sticky bottom-3 left-full ml-auto w-fit bg-slate-900/85 backdrop-blur-xs text-white text-xs px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 pointer-events-none shadow-md mr-3">
+                                                    <i data-lucide="maximize-2" size="14"></i>
+                                                    Clicca per schermo intero
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {msg.text && (
+                                    <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-5`}>
+                                        <div className={`max-w-[88%] md:max-w-[80%] ${
+                                            msg.role === 'user' 
+                                                ? 'bg-indigo-600 text-white shadow-md px-5 py-3.5 rounded-2xl' 
+                                                : 'bg-white border border-slate-200 text-slate-800 shadow-sm p-5 md:p-6 rounded-2xl'
+                                        }`}>
+                                            <p className={`whitespace-pre-wrap leading-relaxed ${
+                                                msg.role === 'user' ? 'text-sm font-medium' : 'text-base text-slate-800 font-normal leading-7'
+                                            }`}>
+                                                {msg.text}
+                                            </p>
+                                            
+                                            {msg.role === 'model' && (
+                                                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => speakMessage(msg.text, i)}
+                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
+                                                            speakingIndex === i
+                                                                ? 'bg-amber-100 text-amber-800 border border-amber-300 shadow-xs animate-pulse'
+                                                                : 'hover:bg-slate-100 text-slate-600 border border-transparent'
+                                                        }`}
+                                                        title={speakingIndex === i ? "Interrompi lettura" : "Ascolta spiegazione (sintesi vocale)"}
+                                                    >
+                                                        <i data-lucide={speakingIndex === i ? "volume-x" : "volume-2"} size="16"></i>
+                                                        <span className="text-xs">{speakingIndex === i ? "Ferma ascolto" : "Ascolta risposta"}</span>
+                                                    </button>
+                                                    <span className="text-[11px] text-slate-400">Supporto DSA/BES</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </React.Fragment>
+                        ))}
+
+                        {isLoading && (
+                            <div className="flex items-center gap-2.5 text-indigo-600 text-sm font-medium py-3 px-2 animate-pulse">
+                                <span className="inline-block w-2.5 h-2.5 rounded-full bg-indigo-600 animate-ping"></span>
+                                <span>Il tutor sta analizzando il quesito digitale...</span>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* Footer */}
+                    <footer className="flex-shrink-0 p-3 md:p-4 pb-3 border-t border-slate-200 bg-white">
+                        <div className="max-w-4xl mx-auto">
+                            {/* Livello selettore */}
+                            <div className="flex items-center gap-2 mb-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                <span>LIVELLO:</span>
+                                <select 
+                                    value={level} 
+                                    onChange={e => setLevel(e.target.value)} 
+                                    className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1 text-slate-700 font-semibold outline-none focus:ring-2 focus:ring-indigo-500 normal-case"
+                                >
+                                    <option value="Secondaria II Grado - Classe Seconda">Secondaria II Grado - Classe Seconda (Grado 10)</option>
+                                    <option value="Secondaria II Grado - Classe Quinta">Secondaria II Grado - Classe Quinta (Grado 13)</option>
+                                </select>
+                            </div>
+
+                            {/* Mini-tastiera scorciatoie veloci */}
+                            <div className="flex items-center gap-1.5 mb-2.5 overflow-x-auto pb-1 text-xs select-none">
+                                <span className="text-slate-400 font-semibold text-[11px] uppercase tracking-wider mr-1 flex items-center gap-1 flex-shrink-0">
+                                    <i data-lucide="keyboard" size="13"></i> Scorciatoie:
+                                </span>
+                                {QUICK_SHORTCUTS.map((sym, idx) => (
+                                    <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => insertSymbol(sym)}
+                                        className="h-7 min-w-[28px] px-2 rounded-lg bg-slate-100 hover:bg-indigo-100 hover:text-indigo-700 text-slate-700 font-bold border border-slate-200 hover:border-indigo-300 transition-all active:scale-95 flex items-center justify-center shadow-xs"
+                                        title={`Inserisci ${sym}`}
+                                    >
+                                        {sym}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Text Input area */}
+                            <div className="flex items-center gap-3">
+                                <div className="flex-1 relative">
+                                    {image && (
+                                        <div className="absolute bottom-full left-0 mb-3 p-2 bg-white rounded-xl shadow-xl border border-slate-200 flex items-center gap-3">
+                                            <img src={image} alt="Anteprima quesito" className="h-14 w-14 object-cover rounded-lg border" />
+                                            <button 
+                                                onClick={() => setImage(null)} 
+                                                className="bg-rose-50 text-rose-500 hover:bg-rose-100 p-1.5 rounded-full transition-colors cursor-pointer"
+                                                title="Rimuovi immagine"
+                                            >
+                                                <i data-lucide="x" size="16"></i>
+                                            </button>
+                                        </div>
+                                    )}
+                                    <textarea 
+                                        ref={textareaRef}
+                                        value={input}
+                                        onChange={e => setInput(e.target.value)}
+                                        onPaste={onPaste}
+                                        onKeyDown={e => { 
+                                            if(e.key === 'Enter' && !e.shiftKey) { 
+                                                e.preventDefault(); 
+                                                sendMessage(); 
+                                            } 
+                                        }}
+                                        placeholder="Scrivi qui il quesito o incolla uno screenshot con Ctrl+V... (Dettatura: Win + H)"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-[24px] px-6 py-4 pr-16 outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none min-h-[64px]"
+                                        rows="1"
+                                    />
+                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-3">
+                                        <button 
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="text-slate-400 hover:text-indigo-600 transition-colors p-1.5 rounded-full cursor-pointer"
+                                            title="Carica immagine o screenshot"
+                                        >
+                                            <i data-lucide="image" size="22"></i>
+                                        </button>
+                                    </div>
+                                    <input type="file" ref={fileInputRef} onChange={(e) => handleImage(e.target.files[0])} accept="image/*" className="hidden" />
+                                </div>
+                                <button 
+                                    type="button"
+                                    onClick={sendMessage}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white p-4 md:p-5 rounded-[24px] shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center flex-shrink-0 cursor-pointer"
+                                    title="Invia messaggio"
+                                >
+                                    <i data-lucide="send" size="20"></i>
+                                </button>
+                            </div>
+                            
+                            {/* Dettatura vocale & Privacy note */}
+                            <div className="mt-2 px-3 flex items-center justify-between text-[11px] text-slate-400 select-none">
+                                <span className="flex items-center gap-1.5">
+                                    <i data-lucide="mic" size="13" className="text-slate-400"></i>
+                                    <span>Dettatura vocale: premi <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-600 font-semibold font-mono text-[10px]">Win</kbd> + <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-600 font-semibold font-mono text-[10px]">H</kbd> da PC.</span>
+                                </span>
+                                <span className="hidden sm:flex items-center gap-1 text-emerald-600 font-medium">
+                                    <i data-lucide="shield-check" size="13"></i>
+                                    <span>Privacy protetta</span>
+                                </span>
+                            </div>
+                        </div>
+                    </footer>
+
+                    {/* Modal Zoom a schermo intero */}
+                    {zoomImage && (
+                        <div 
+                            className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-between p-3 md:p-5 animate-in fade-in"
+                            onClick={() => setZoomImage(null)}
+                        >
+                            <div 
+                                className="w-full max-w-6xl bg-slate-900/95 border border-slate-700/80 rounded-2xl px-4 py-2.5 flex items-center justify-between text-white shadow-xl mb-3"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <span className="p-1.5 bg-indigo-500/20 text-indigo-400 rounded-lg">
+                                        <i data-lucide="laptop" size="18"></i>
+                                    </span>
+                                    <div className="hidden sm:block">
+                                        <h3 className="text-sm font-semibold text-slate-100">Visualizzatore Quesiti DigComp</h3>
+                                        <p className="text-[11px] text-slate-400">Esamina screenshot, icone e testo ad alta risoluzione</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-1 bg-slate-800 border border-slate-700 px-2 py-1 rounded-xl">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setZoomScale(prev => Math.max(0.6, prev - 0.25))}
+                                        className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
+                                        title="Rimpicciolisci (-)"
+                                    >
+                                        <i data-lucide="minus" size="16"></i>
+                                    </button>
+                                    <span className="text-xs font-mono font-bold text-indigo-300 w-14 text-center select-none">
+                                        {Math.round(zoomScale * 100)}%
+                                    </span>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setZoomScale(prev => Math.min(3.0, prev + 0.25))}
+                                        className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
+                                        title="Ingrandisci (+)"
+                                    >
+                                        <i data-lucide="plus" size="16"></i>
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setZoomScale(1.0)}
+                                        className="text-[11px] px-2.5 py-1 rounded-lg hover:bg-slate-700 text-slate-300 font-semibold ml-1 transition-colors cursor-pointer"
+                                        title="Reimposta scala al 100%"
+                                    >
+                                        100%
+                                    </button>
+                                </div>
+
+                                <button 
+                                    type="button"
+                                    onClick={() => setZoomImage(null)}
+                                    className="bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                                >
+                                    <i data-lucide="x" size="16"></i>
+                                    <span>Chiudi (ESC)</span>
+                                </button>
+                            </div>
+
+                            <div 
+                                className="w-full max-w-6xl flex-1 overflow-auto rounded-2xl bg-slate-900/60 border border-slate-800/80 p-4 md:p-6 flex items-start justify-center shadow-2xl messages-container"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="m-auto flex items-center justify-center py-4 transition-all duration-200">
+                                    <img 
+                                        src={zoomImage} 
+                                        alt="Schermata ingrandita" 
+                                        style={{ 
+                                            width: `${Math.round(zoomScale * 920)}px`, 
+                                            maxWidth: 'none' 
+                                        }}
+                                        className="h-auto object-contain rounded-xl bg-white shadow-2xl select-none transition-all duration-150" 
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
