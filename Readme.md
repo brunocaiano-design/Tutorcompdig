@@ -4,7 +4,7 @@ Un'applicazione web interattiva progettata per guidare gli utenti nella valutazi
 
 
 
-## 🎯 Obiettivi del Progetto
+## 🎯 Obiettivi del Progetto 
 
 Il tutor supporta l'utente nella navigazione delle 5 aree di competenza DigComp:
 1. **Alfabetizzazione su dati e informazioni**
